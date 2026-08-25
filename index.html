@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:">
+  <title>Stay - Idoneità alla Guida</title>
+  
+  <!-- Font moderno & Icone -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-dark: #0a0a0c;
+      --card-border: rgba(255, 255, 255, 0.15);
+      --primary-red: #e63946;
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app-container {
+      position: relative;
+      /* Margine fluido adattabile allo schermo dello smartphone */
+      width: calc(100vw - clamp(12px, 4vw, 24px));
+      height: 100vh;
+      height: 100dvh;
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8);
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      transition: background-color 0.2s ease;
+    }
+
+    /* Allarme Visivo Stroboscopico Coma */
+    #app-container.strobe-alert {
+      animation: strobeAnim 0.25s infinite alternate;
+    }
+
+    @keyframes strobeAnim {
+      0% { background-color: #000; }
+      100% { background-color: rgba(230, 57, 70, 0.6); }
+    }
+
+    .coma-banner {
+      display: none;
+      background: var(--primary-red);
+      color: white;
+      font-weight: 800;
+      text-align: center;
+      padding: 8px 12px;
+      font-size: clamp(0.75rem, 3vw, 0.85rem);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      animation: pulseText 0.5s infinite alternate;
+      z-index: 20;
+    }
+
+    @keyframes pulseText {
+      0% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      object-fit: cover;
+      transition: filter 0.5s ease;
+    }
+
+    .hud-layer {
+      position: relative;
+      z-index: 10;
+      padding: clamp(10px, 4vw, 16px);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .hud-layer * {
+      pointer-events: auto;
+    }
+
+    /* BARRA IN ALTO A TINTA UNITA E COLORI SFUMATI DINAMICI */
+    .status-card {
+      background-color: #1b4332;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: clamp(12px, 4vw, 20px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      transition: background-color 0.8s ease, border-color 0.8s ease;
+    }
+
+    .gauge-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: clamp(0.7rem, 2.8vw, 0.85rem);
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .promille-display {
+      font-size: clamp(1.3rem, 6vw, 1.6rem);
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: clamp(0.8rem, 3.2vw, 0.95rem);
+    }
+
+    .bottom-controls {
+      position: relative;
+      z-index: 10;
+      padding: clamp(12px, 4vw, 20px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    }
+
+    .btn-fab {
+      width: clamp(50px, 14vw, 60px);
+      height: clamp(50px, 14vw, 60px);
+      border-radius: 50%;
+      background: var(--primary-red);
+      color: white;
+      border: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: clamp(1.1rem, 5vw, 1.4rem);
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(230, 57, 70, 0.4);
+      transition: transform 0.2s ease, opacity 0.3s ease, width 0.3s ease, border-radius 0.3s ease;
+    }
+
+    .btn-fab:active { transform: scale(0.92); }
+
+    .btn-fab.secondary {
+      background: rgba(22, 22, 28, 0.85);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Stato del tasto quando diventa Stoppa e Resetta */
+    .btn-fab.stop-alarm {
+      width: 100%;
+      border-radius: var(--radius-md);
+      background: var(--primary-red);
+      font-weight: 700;
+      font-size: 0.95rem;
+      gap: 10px;
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.8);
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: #121216;
+      border-top-left-radius: 32px;
+      border-top-right-radius: 32px;
+      border-top: 1px solid var(--card-border);
+      padding: clamp(16px, 5vw, 24px);
+      max-height: 85%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+
+    .modal-overlay.active .modal-card { transform: translateY(0); }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      font-size: clamp(1.1rem, 4.5vw, 1.3rem);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-close {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .setting-group {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .setting-label {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .setting-value {
+      color: var(--primary-red);
+      font-weight: 700;
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--primary-red); }
+
+    .toggle-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      gap: 4px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active { background: var(--primary-red); color: white; }
+
+    .drink-search {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      color: white;
+      outline: none;
+    }
+
+    .drink-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .drink-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .drink-item:hover, .drink-item:active {
+      background: rgba(230, 57, 70, 0.1);
+      border-color: rgba(230, 57, 70, 0.3);
+    }
+
+    .drink-info h4 { font-size: 0.9rem; font-weight: 700; }
+    .drink-info p { font-size: 0.75rem; color: var(--text-muted); }
+
+    .drink-badge {
+      background: rgba(255, 255, 255, 0.08);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .btn-primary-action {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary-red);
+      border: none;
+      border-radius: var(--radius-md);
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .btn-secondary-action {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Sezione Informativa CNESPS */
+    .info-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .info-box h5 {
+      color: var(--text-main);
+      font-size: 0.8rem;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @media (min-width: 481px) {
+      #app-container {
+        height: 90vh;
+        max-height: 850px;
+        border-radius: 36px;
+        border: 1px solid var(--card-border);
+        margin-top: 5vh;
+      }
+      .modal-card {
+        border-bottom-left-radius: 36px;
+        border-bottom-right-radius: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <div class="coma-banner" id="coma-banner">⚠️ ALLARME ROSSO: RISCHIO COMA ETILICO ⚠️</div>
+
+    <canvas id="game-canvas"></canvas>
+
+    <div class="hud-layer">
+      <!-- Scheda in alto a tinta unita dinamica -->
+      <div class="status-card" id="top-status-card">
+        <div class="gauge-header">
+          <span>Tasso Alcolemico Stimato</span>
+        </div>
+        <div class="promille-display" id="promille-val">0.00 g/l</div>
+        
+        <div class="status-badge">
+          <i class="fa-solid fa-thumbs-up" id="status-icon"></i>
+          <span id="status-text">Idoneo alla guida</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-controls" id="bottom-controls">
+      <button class="btn-fab" id="open-add-btn" title="Aggiungi Bevanda">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+      
+      <button class="btn-fab secondary" id="open-settings-btn" title="Impostazioni">
+        <i class="fa-solid fa-gear" id="settings-icon"></i>
+        <span id="settings-btn-text" style="display: none;">STOPPA E RESETTA</span>
+      </button>
+    </div>
+
+    <!-- MODALE 1: AGGIUNGI BEVANDA -->
+    <div class="modal-overlay" id="modal-add">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2><i class="fa-solid fa-wine-glass" style="color: var(--primary-red);"></i> Aggiungi Bevanda</h2>
+          <button class="btn-close" onclick="closeModal('modal-add')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <input type="text" class="drink-search" placeholder="Cerca alcolico..." id="drink-search-input">
+
+        <div class="drink-list" id="drink-list-container"></div>
+
+        <button class="btn-primary-action" onclick="closeModal('modal-add')">Chiudi</button>
+      </div>
+    </div>
+
+    <!-- MODALE 2: IMPOSTAZIONI -->
+    <div class="modal-overlay" id="modal-settings">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2><i class="fa-solid fa-sliders" style="color: var(--primary-red);"></i> Impostazioni</h2>
+          <button class="btn-close" onclick="closeModal('modal-settings')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label">
+            <span>Peso Corporeo</span>
+            <span class="setting-value" id="weight-val">70 kg</span>
+          </div>
+          <input type="range" id="weight-range" min="40" max="140" value="70">
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label">
+            <span>Sesso Biologico</span>
+          </div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="gender-m" onclick="setGender('M')">Maschio</button>
+            <button class="toggle-btn" id="gender-f" onclick="setGender('F')">Femmina</button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label">
+            <span>Stato Stomaco</span>
+          </div>
+          <div class="toggle-group">
+            <button class="toggle-btn active" id="stomach-empty" onclick="setStomach('empty')">A Digiuno</button>
+            <button class="toggle-btn" id="stomach-full" onclick="setStomach('full')">Pieno</button>
+          </div>
+        </div>
+
+        <!-- INFORMATIVA FONTI CNESPS -->
+        <div class="info-box">
+          <h5><i class="fa-solid fa-circle-info" style="color: var(--primary-red);"></i> Fonti & Calcolo Alcolemico</h5>
+          I calcoli si basano sulla formula di Widmark e sulle tabelle per la stima del tasso alcolemico elaborate dal <strong>CNESPS</strong> (Centro Nazionale per la Prevenzione delle Malattie e la Promozione della Salute - Istituto Superiore di Sanità). I valori stimati hanno carattere puramente indicativo e non sostituiscono i test ufficiali.
+        </div>
+
+        <button class="btn-secondary-action" onclick="resetConsumedDrinks()">Azzera Bevande Assunte</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SINTETIZZATORE AUDIO ---
+    let audioCtx = null;
+    let alarmInterval = null;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playBeep(freq = 440, type = 'sine', duration = 0.15) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playMetalCrashSound() {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+      } catch (e) {}
+    }
+
+    function updateAudioAlarms() {
+      if (alarmInterval) clearInterval(alarmInterval);
+
+      if (currentPromille >= 2.5) {
+        alarmInterval = setInterval(() => {
+          playBeep(880, 'sawtooth', 0.2);
+          setTimeout(() => playBeep(600, 'sawtooth', 0.2), 200);
+        }, 500);
+      } else if (currentPromille >= 0.5) {
+        const delay = Math.max(200, 1000 - (currentPromille * 200));
+        alarmInterval = setInterval(() => playBeep(440, 'sine', 0.1), delay);
+      }
+    }
+
+    // --- INDEXED DB ---
+    let db = null;
+    const DB_NAME = 'StayAppDB';
+    const DB_VERSION = 1;
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const dbInstance = e.target.result;
+          if (!dbInstance.objectStoreNames.contains('user_profile')) {
+            dbInstance.createObjectStore('user_profile', { keyPath: 'id' });
+          }
+          if (!dbInstance.objectStoreNames.contains('consumed_drinks')) {
+            dbInstance.createObjectStore('consumed_drinks', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    async function saveProfile() {
+      if (!db) return;
+      const tx = db.transaction('user_profile', 'readwrite');
+      tx.objectStore('user_profile').put({
+        id: 'settings',
+        weight: userSettings.weight,
+        gender: userSettings.gender,
+        stomach: userSettings.stomach
+      });
+    }
+
+    async function loadProfile() {
+      if (!db) return;
+      const tx = db.transaction('user_profile', 'readonly');
+      const req = tx.objectStore('user_profile').get('settings');
+      req.onsuccess = () => {
+        if (req.result) {
+          userSettings.weight = req.result.weight || 70;
+          userSettings.gender = req.result.gender || 'M';
+          userSettings.stomach = req.result.stomach || 'empty';
+          
+          document.getElementById('weight-range').value = userSettings.weight;
+          document.getElementById('weight-val').innerText = `${userSettings.weight} kg`;
+          setGenderUI(userSettings.gender);
+          setStomachUI(userSettings.stomach);
+          recalculateBAC();
+        }
+      };
+    }
+
+    async function saveDrinkToDB(drink) {
+      initAudio();
+      if (!db) return;
+      const tx = db.transaction('consumed_drinks', 'readwrite');
+      await tx.objectStore('consumed_drinks').add({
+        name: drink.name,
+        vol: parseFloat(drink.vol),
+        cl: drink.cl,
+        timestamp: Date.now()
+      });
+      recalculateBAC();
+    }
+
+    async function resetConsumedDrinks() {
+      if (!db) return;
+      const tx = db.transaction('consumed_drinks', 'readwrite');
+      await tx.objectStore('consumed_drinks').clear();
+      trafficCars = [];
+      recalculateBAC();
+      closeModal('modal-settings');
+    }
+
+    async function recalculateBAC() {
+      if (!db) return;
+      const tx = db.transaction('consumed_drinks', 'readonly');
+      const req = tx.objectStore('consumed_drinks').getAll();
+
+      req.onsuccess = () => {
+        const drinks = req.result || [];
+        if (drinks.length === 0) {
+          currentPromille = 0.0;
+          updateStatus();
+          return;
+        }
+
+        let totalGramsOfAlcohol = 0;
+        const now = Date.now();
+
+        drinks.forEach(d => {
+          const volumeMl = d.cl * 10;
+          const alcoholGrams = volumeMl * (d.vol / 100) * 0.8;
+          const hoursPassed = (now - d.timestamp) / (1000 * 60 * 60);
+          const gramsMetabolized = hoursPassed * 10;
+          totalGramsOfAlcohol += Math.max(0, alcoholGrams - gramsMetabolized);
+        });
+
+        let r = userSettings.gender === 'M' ? 0.68 : 0.55;
+        if (userSettings.stomach === 'full') r *= 1.2;
+
+        currentPromille = Math.max(0, totalGramsOfAlcohol / (userSettings.weight * r));
+        updateStatus();
+      };
+    }
+
+    // --- BEVANDE & STATO ---
+    const drinksData = [
+      { id: 1, name: "Birra Chiara", vol: "4.5%", cl: 33 },
+      { id: 2, name: "Birra Speciale", vol: "6.5%", cl: 33 },
+      { id: 3, name: "Birra Doppio Malto", vol: "8.0%", cl: 33 },
+      { id: 4, name: "Vino da Tavola", vol: "12.0%", cl: 12.5 },
+      { id: 5, name: "Vini Liquorosi / Aperitivi", vol: "18.0%", cl: 8 },
+      { id: 6, name: "Digestivo / Amaro", vol: "30.0%", cl: 4 },
+      { id: 7, name: "Superalcolico (Vol. 35%)", vol: "35.0%", cl: 4 },
+      { id: 8, name: "Superalcolico (Vol. 45%)", vol: "45.0%", cl: 4 },
+      { id: 9, name: "Champagne / Spumante", vol: "11.5%", cl: 10 }
+    ];
+
+    const userSettings = { weight: 70, gender: 'M', stomach: 'empty' };
+    let currentPromille = 0.0;
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    document.getElementById('open-add-btn').addEventListener('click', () => openModal('modal-add'));
+    
+    // Gestione click dinamico del tasto Settings / Stoppa e Resetta
+    document.getElementById('open-settings-btn').addEventListener('click', () => {
+      if (currentPromille >= 2.5) {
+        resetConsumedDrinks();
+      } else {
+        openModal('modal-settings');
+      }
+    });
+
+    const listContainer = document.getElementById('drink-list-container');
+    function renderDrinks(filter = "") {
+      listContainer.innerHTML = "";
+      drinksData
+        .filter(d => d.name.toLowerCase().includes(filter.toLowerCase()))
+        .forEach(drink => {
+          const item = document.createElement('div');
+          item.className = 'drink-item';
+          item.innerHTML = `
+            <div class="drink-info">
+              <h4>${drink.name}</h4>
+              <p>${drink.cl} cl</p>
+            </div>
+            <span class="drink-badge">${drink.vol}</span>
+          `;
+          item.onclick = () => { saveDrinkToDB(drink); closeModal('modal-add'); };
+          listContainer.appendChild(item);
+        });
+    }
+
+    document.getElementById('drink-search-input').addEventListener('input', (e) => renderDrinks(e.target.value));
+    renderDrinks();
+
+    const weightRange = document.getElementById('weight-range');
+    weightRange.addEventListener('input', (e) => {
+      userSettings.weight = parseInt(e.target.value);
+      document.getElementById('weight-val').innerText = `${userSettings.weight} kg`;
+      saveProfile();
+      recalculateBAC();
+    });
+
+    function setGender(g) { userSettings.gender = g; setGenderUI(g); saveProfile(); recalculateBAC(); }
+    function setGenderUI(g) {
+      document.getElementById('gender-m').classList.toggle('active', g === 'M');
+      document.getElementById('gender-f').classList.toggle('active', g === 'F');
+    }
+
+    function setStomach(s) { userSettings.stomach = s; setStomachUI(s); saveProfile(); recalculateBAC(); }
+    function setStomachUI(s) {
+      document.getElementById('stomach-empty').classList.toggle('active', s === 'empty');
+      document.getElementById('stomach-full').classList.toggle('active', s === 'full');
+    }
+
+    // --- AGGIORNAMENTO DINAMICO COLORE SCHEDA E PULSANTI ---
+    function updateStatus() {
+      updateStatusUIOnly();
+      updateAudioAlarms();
+    }
+
+    function updateStatusUIOnly() {
+      const promilleEl = document.getElementById('promille-val');
+      const topCard = document.getElementById('top-status-card');
+      const iconEl = document.getElementById('status-icon');
+      const textEl = document.getElementById('status-text');
+      const appContainer = document.getElementById('app-container');
+      const comaBanner = document.getElementById('coma-banner');
+      
+      const addBtn = document.getElementById('open-add-btn');
+      const settingsBtn = document.getElementById('open-settings-btn');
+      const settingsIcon = document.getElementById('settings-icon');
+      const settingsText = document.getElementById('settings-btn-text');
+
+      promilleEl.innerText = `${currentPromille.toFixed(2)} g/l`;
+
+      // Reset Controlli UI
+      addBtn.style.display = 'flex';
+      settingsBtn.classList.remove('stop-alarm');
+      settingsIcon.style.display = 'inline-block';
+      settingsIcon.className = 'fa-solid fa-gear';
+      settingsText.style.display = 'none';
+
+      if (currentPromille === 0) {
+        topCard.style.backgroundColor = "#1b4332";
+        topCard.style.borderColor = "rgba(46, 196, 182, 0.4)";
+        iconEl.className = "fa-solid fa-thumbs-up";
+        textEl.innerText = "Idoneo alla guida";
+        appContainer.classList.remove('strobe-alert');
+        comaBanner.style.display = 'none';
+      } else if (currentPromille < 0.5) {
+        topCard.style.backgroundColor = "#b76e00";
+        topCard.style.borderColor = "rgba(255, 183, 3, 0.5)";
+        iconEl.className = "fa-solid fa-triangle-exclamation";
+        textEl.innerText = "Attenzione (Neopatentati 0.0)";
+        appContainer.classList.remove('strobe-alert');
+        comaBanner.style.display = 'none';
+      } else if (currentPromille < 2.5) {
+        topCard.style.backgroundColor = "#9b2226";
+        topCard.style.borderColor = "rgba(230, 57, 70, 0.6)";
+        iconEl.className = "fa-solid fa-hand";
+        textEl.innerText = "Non idoneo alla guida";
+        appContainer.classList.remove('strobe-alert');
+        comaBanner.style.display = 'none';
+      } else {
+        topCard.style.backgroundColor = "#4a0e4e";
+        topCard.style.borderColor = "rgba(161, 0, 242, 0.8)";
+        iconEl.className = "fa-solid fa-skull-crossbones";
+        textEl.innerText = "RISCHIO COMA ETILICO";
+        comaBanner.style.display = 'block';
+
+        appContainer.classList.add('strobe-alert');
+        addBtn.style.display = 'none';
+        settingsBtn.classList.add('stop-alarm');
+        settingsIcon.className = 'fa-solid fa-rotate-left';
+        settingsText.style.display = 'inline';
+      }
+
+      const canvasEl = document.getElementById('game-canvas');
+      if (currentPromille > 0.5) {
+        const blurAmount = Math.min((currentPromille - 0.5) * 2.5, 8);
+        canvasEl.style.filter = `blur(${blurAmount}px)`;
+      } else {
+        canvasEl.style.filter = `none`;
+      }
+    }
+
+    // --- ANIMAZIONE STRADA, TRAFFICO REALISTICO & INCIDENTI ---
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let laneOffset = 0;
+    let carTime = 0;
+    let trafficCars = [];
+    let smokeParticles = [];
+    let screenShake = 0;
+
+    // SPAWN CONTINUO TRAFFICO
+    function spawnTraffic() {
+      if (trafficCars.length < 3 && Math.random() < 0.02) {
+        trafficCars.push({
+          xOffset: (Math.random() - 0.5) * 0.5,
+          yProgress: 0.05,
+          speed: 0.003 + Math.random() * 0.004,
+          color: ['#1e3d59', '#3b6978', '#84a9ac', '#202040', '#d9534f'][Math.floor(Math.random() * 5)],
+          isCrashed: false,
+          deformAngle: 0
+        });
+      }
+    }
+
+    function createCrashSmoke(x, y) {
+      for (let i = 0; i < 2; i++) {
+        smokeParticles.push({
+          x: x + (Math.random() - 0.5) * 20,
+          y: y + (Math.random() - 0.5) * 20,
+          vx: (Math.random() - 0.5) * 2,
+          vy: -Math.random() * 2 - 1,
+          size: Math.random() * 8 + 6,
+          opacity: 0.8
+        });
+      }
+    }
+
+    function drawRoad() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.save();
+
+      if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+        screenShake *= 0.85;
+      }
+
+      // Erba e Terreno
+      ctx.fillStyle = '#0a1a0a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Strada in Prospettiva
+      ctx.fillStyle = '#181820';
+      ctx.beginPath();
+      ctx.moveTo(w * 0.38, 0);
+      ctx.lineTo(w * 0.62, 0);
+      ctx.lineTo(w * 0.95, h);
+      ctx.lineTo(w * 0.05, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Guardrail
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.38, 0); ctx.lineTo(w * 0.05, h);
+      ctx.moveTo(w * 0.62, 0); ctx.lineTo(w * 0.95, h);
+      ctx.stroke();
+
+      // Linea di mezzeria animata
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([25, 25]);
+      ctx.lineDashOffset = -laneOffset;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, 0); ctx.lineTo(w * 0.5, h);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Generazione traffico costante
+      spawnTraffic();
+
+      carTime += 0.03;
+      const drunkennessFactor = Math.min(currentPromille / 1.2, 2.5);
+      const wobble = Math.sin(carTime * 1.5) * 50 * drunkennessFactor + Math.cos(carTime * 2.7) * 25 * drunkennessFactor;
+      const playerX = (w * 0.5) + wobble;
+      const playerY = h * 0.75;
+      const carAngle = (Math.cos(carTime * 1.5) * 0.12) * drunkennessFactor;
+
+      // Render Veicoli nel Traffico
+      for (let i = trafficCars.length - 1; i >= 0; i--) {
+        let tc = trafficCars[i];
+        
+        if (!tc.isCrashed) {
+          tc.yProgress += tc.speed;
+        } else {
+          tc.yProgress += 0.003;
+        }
+
+        const currentY = tc.yProgress * h;
+        const perspectiveScale = (0.2 + tc.yProgress * 0.8);
+        const laneWidth = (0.38 + (tc.yProgress * 0.57));
+        const currentX = (w * 0.5) + (tc.xOffset * w * laneWidth);
+
+        drawRealisticTrafficCar(currentX, currentY, tc.color, perspectiveScale, tc.isCrashed, tc.deformAngle);
+
+        const hitX = Math.abs(currentX - playerX);
+        const hitY = Math.abs(currentY - playerY);
+
+        // CONTROLLO INCIDENTI: ATTIVO SOLO OLTRE I 0.25 g/l
+        if (currentPromille > 0.25 && !tc.isCrashed && hitY < 45 * perspectiveScale && hitX < 50 * perspectiveScale) {
+          tc.isCrashed = true;
+          tc.deformAngle = (Math.random() - 0.5) * 0.6;
+          screenShake = 20;
+          playMetalCrashSound();
+        }
+
+        if (tc.isCrashed) {
+          createCrashSmoke(currentX, currentY);
+        }
+
+        // Rimozione sicura fuori dallo schermo
+        if (tc.yProgress > 1.2) {
+          trafficCars.splice(i, 1);
+        }
+      }
+
+      // Particelle di Fumo dai Relitti
+      for (let j = smokeParticles.length - 1; j >= 0; j--) {
+        let p = smokeParticles[j];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.size += 0.3;
+        p.opacity -= 0.015;
+
+        ctx.fillStyle = `rgba(100, 100, 100, ${Math.max(0, p.opacity)})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (p.opacity <= 0) smokeParticles.splice(j, 1);
+      }
+
+      // Disegna Auto Utente
+      drawRealisticPlayerCar(playerX, playerY, carAngle);
+
+      ctx.restore();
+
+      laneOffset += 3 + (drunkennessFactor * 2);
+      requestAnimationFrame(drawRoad);
+    }
+
+    // RENDERING AUTO UTENTE REALISTICA
+    function drawRealisticPlayerCar(x, y, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+
+      const w = 75;
+      const h = 110;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(0, 15, w / 1.8, h / 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#111';
+      ctx.fillRect(-w / 2 - 4, 10, 8, 22);
+      ctx.fillRect(w / 2 - 4, 10, 8, 22);
+
+      ctx.fillStyle = '#b7094c';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, [12, 12, 8, 8]);
+      ctx.fill();
+
+      ctx.fillStyle = '#89043e';
+      ctx.fillRect(-w / 2, -h / 4, 6, h / 2);
+      ctx.fillRect(w / 2 - 6, -h / 4, 6, h / 2);
+
+      ctx.fillStyle = '#0a0a0c';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2.6, -h / 3, w / 1.3, h / 2.2, 8);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.beginPath();
+      ctx.moveTo(-w / 3, -h / 4);
+      ctx.lineTo(0, -h / 3);
+      ctx.lineTo(w / 4, -h / 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#ff003c';
+      ctx.shadowColor = '#ff003c';
+      ctx.shadowBlur = 12;
+      ctx.fillRect(-w / 2 + 4, h / 2 - 12, 20, 8);
+      ctx.fillRect(w / 2 - 24, h / 2 - 12, 20, 8);
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-12, h / 2 - 8, 24, 7);
+      ctx.fillStyle = '#000';
+      ctx.font = '5px sans-serif';
+      ctx.fillText('STAY 00', -10, h / 2 - 3);
+
+      ctx.restore();
+    }
+
+    // RENDERING AUTO TRAFFICO REALISTICA
+    function drawRealisticTrafficCar(x, y, color, scale, isCrashed, deformAngle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+
+      if (isCrashed) {
+        ctx.rotate(deformAngle);
+      }
+
+      const w = 70;
+      const h = 100;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, w / 2, h / 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = isCrashed ? '#333333' : color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#111115';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2.5, -h / 3, w / 1.25, h / 2.2, 6);
+      ctx.fill();
+
+      if (!isCrashed) {
+        ctx.fillStyle = '#ff1e1e';
+        ctx.shadowColor = '#ff0000';
+        ctx.shadowBlur = 10;
+        ctx.fillRect(-w / 2 + 5, h / 2 - 8, 16, 6);
+        ctx.fillRect(w / 2 - 21, h / 2 - 8, 16, 6);
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.strokeStyle = '#ffb703';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-w / 2, -h / 2);
+        ctx.lineTo(0, -h / 4);
+        ctx.lineTo(w / 2, -h / 2);
+        ctx.stroke();
+
+        ctx.fillStyle = Math.random() > 0.5 ? '#ffb703' : '#333';
+        ctx.fillRect(-w / 2 + 5, h / 2 - 8, 10, 6);
+      }
+
+      ctx.restore();
+    }
+
+    // --- INIZIALIZZAZIONE ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initDB();
+      await loadProfile();
+      drawRoad();
+    });
+  </script>
+</body>
+</html>
